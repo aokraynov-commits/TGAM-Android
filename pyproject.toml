@@ -1,0 +1,19 @@
+[project]
+name = "tgam-monitor"
+version = "4.1.0"
+description = "Мониторинг нейроинтерфейса MindWave (TGAM) и управление курсором мыши"
+requires-python = ">=3.8"
+dependencies = [
+    "pyserial",
+    "pyautogui",
+]
+
+[project.scripts]
+tgam-monitor = "tgam_monitor.app:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:libtmux"
+
+[tool.setuptools.packages.find]
+include = ["tgam_monitor*"]
