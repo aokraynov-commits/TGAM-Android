@@ -1,8 +1,11 @@
 """GUI-приложение мониторинга MindWave (tkinter).
 
 Отвечает только за интерфейс и ввод/вывод последовательного порта:
-парсинг протокола вынесен в :mod:`tgam_monitor.parser`,
-логика движения мыши — в :mod:`tgam_monitor.mouse`.
+парсинг протокола вынесен в :mod:`tgam_monitor.parser`.
+
+Управление курсором мыши удалено — приложение показывает только
+показатели датчика.
+Порт логики для Android без мыши: ``android/app/src/main/java/dev/tgam/parser``.
 """
 
 from __future__ import annotations
@@ -17,7 +20,6 @@ import serial.tools.list_ports
 import tkinter as tk
 from tkinter import messagebox
 
-from tgam_monitor import mouse
 from tgam_monitor.parser import TGAMParser
 
 logger = logging.getLogger(__name__)
@@ -70,21 +72,17 @@ class SerialReader:
 
 
 class MindWaveMonitor(tk.Tk):
-    """Окно приложения: настройки порта, показатели, управление курсором."""
+    """Окно приложения: настройки порта и текущие показатели датчика."""
 
     def __init__(self):
         super().__init__()
-        self.title("MindWave Mouse Controller (Simple)")
-        self.geometry("450x300")
+        self.title("MindWave Monitor (Simple)")
+        self.geometry("450x260")
         self.resizable(False, False)
 
         # --- настройки ---
         self.port_var = tk.StringVar(value="COM5")
         self.baudrate = 9600
-        self.continuous_mode = tk.BooleanVar(value=False)
-        self.speed = mouse.DEFAULT_SPEED
-        self.threshold_medium = 50
-        self.threshold_high = 70
 
         # --- состояние ---
         self.data_queue: "queue.Queue[dict]" = queue.Queue()
@@ -118,12 +116,6 @@ class MindWaveMonitor(tk.Tk):
         self.status_label = tk.Label(self, text="Не подключено", fg="red")
         self.status_label.pack()
 
-        tk.Checkbutton(
-            self,
-            text="Непрерывное управление (внимание по Y, медитация по X)",
-            variable=self.continuous_mode,
-        ).pack(pady=5)
-
         val_frame = tk.Frame(self)
         val_frame.pack(pady=10)
         tk.Label(val_frame, text="Внимание:").grid(row=0, column=0, sticky="w")
@@ -140,14 +132,6 @@ class MindWaveMonitor(tk.Tk):
 
         self.packet_label = tk.Label(self, text="Пакетов: 0")
         self.packet_label.pack()
-
-        self.indicator = tk.Canvas(self, width=50, height=50, bg="gray")
-        self.indicator.pack(pady=10)
-
-        tk.Label(
-            self,
-            text="Дискретный режим: 0-25 вверх, 26-50 вниз, 51-75 влево, 76-100 вправо",
-        ).pack()
 
     # --------------------------------------------------------- действия UI
     def list_ports(self) -> None:
@@ -178,7 +162,6 @@ class MindWaveMonitor(tk.Tk):
         self.status_label.config(text="Не подключено", fg="red")
         self.attention_label.config(text="--")
         self.meditation_label.config(text="--")
-        self.indicator.config(bg="gray")
         with self.data_queue.mutex:
             self.data_queue.queue.clear()
 
@@ -201,36 +184,10 @@ class MindWaveMonitor(tk.Tk):
                 if "meditation" in data:
                     self.last_meditation = data["meditation"]
                     self.meditation_label.config(text=str(self.last_meditation))
-
-                # Двигаем мышь при каждом пакете
-                if self.running:
-                    self.move_mouse()
-
-                self.update_indicator()
         except queue.Empty:
             pass
 
         self.after(POLL_INTERVAL_MS, self.poll_queue)
-
-    # ------------------------------------------------------ движение мыши
-    def move_mouse(self) -> None:
-        if self.continuous_mode.get():
-            mouse.move_continuous(
-                self.last_attention, self.last_meditation, self.speed
-            )
-        else:
-            mouse.move_discrete(self.last_attention)
-
-    def update_indicator(self) -> None:
-        color = mouse.indicator_color(
-            self.last_attention,
-            self.last_meditation,
-            running=self.running,
-            continuous=self.continuous_mode.get(),
-            threshold_medium=self.threshold_medium,
-            threshold_high=self.threshold_high,
-        )
-        self.indicator.config(bg=color)
 
 
 def main() -> None:

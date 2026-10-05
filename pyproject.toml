@@ -1,11 +1,10 @@
 [project]
 name = "tgam-monitor"
-version = "4.1.0"
-description = "Мониторинг нейроинтерфейса MindWave (TGAM) и управление курсором мыши"
+version = "4.2.0"
+description = "Мониторинг нейроинтерфейса MindWave (TGAM)"
 requires-python = ">=3.8"
 dependencies = [
     "pyserial",
-    "pyautogui",
 ]
 
 [project.scripts]
